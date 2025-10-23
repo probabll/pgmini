@@ -1,3 +1,4 @@
+import itertools
 from collections import defaultdict, deque
 from tabulate import tabulate
 
@@ -126,3 +127,92 @@ class DAG:
 
     def __repr__(self):
         return str(self)
+
+
+def compute_reachable_nodes(dag: DAG, X: set, Y: set, Z: set):
+    """
+    Return the set of nodes in Y that are reachable from X via an active trail, given Z.
+    
+    dag: a DAG 
+    X: from nodes
+    Y: to nodes
+    Z: observed nodes        
+    """
+    X, Y, Z = set(X), set(Y), set(Z)    
+    assert len(X & Y) == len(X & Z) == len(Y & Z) == 0, "X, Y and Z should be pairwise disjoint"
+    # all of these can activate v-structures
+    ancestors_of_evidence = set(itertools.chain(*(dag.ancestors[z] for z in Z)))
+    
+    reachable = set()
+    # BFS over (node, direction) pairs
+    # direction ∈ {"up", "down"}
+    visited = set()
+    queue = deque()
+
+    # The metaphor is that of a flow
+    #  and some switches control whether influence indeed flows
+    #  or not, in which case it 'bounces'.
+    # The switches are closed by colliders that are observed or which have some observed descendant,
+    #  these cause downward influence to bounce upward.
+    # The switches are also closed and by non-colliders that are observed
+    #  these prevents downward influence from continuing down
+    #  and upward influence from continuing up.
+    
+    # Start from all X nodes
+    for x in X:
+        # when we visit a node from below (that means arriving at it from one of its children)
+        # we are reasoning about influence going 'up'
+        queue.append((x, "up"))
+        # when we visit a node from above (that means arriving at it from one of its parents)
+        # we are reasoning about influence going 'down'
+        queue.append((x, "down"))
+
+    while queue:
+        node, direction = queue.popleft()
+        if (node, direction) in visited:  # we have already visited this node, in this direction
+            continue
+        # mark the node as visited in this direction
+        visited.add((node, direction))
+
+        # If we reach any node in Y, there is an active trail
+        if node in Y:
+            reachable.add(node)
+
+        if direction == "up" and node not in Z:
+            # when we enter a node from below (the direction is 'up')
+            # influence can flow up to parents
+            # or down to other children, 
+            # so long as the node is not observed (in Z)
+            
+            for p in dag.parents[node]:
+                queue.append((p, "up"))
+            
+            for c in dag.children[node]:
+                queue.append((c, "down"))            
+                
+        elif direction == "down":  
+            # when we enter a node from above (the direction is 'down')
+            # influence flows down through it and to its children, going down
+            #  so long as the node is not observed
+            if node not in Z:
+                # go down to children
+                for c in dag.children[node]:
+                    queue.append((c, "down"))
+            else:  # and if the node is observed, then influence bounces up to other parents
+                for p in dag.parents[node]:
+                    queue.append((p, "up"))
+            # influence also goes up to parents 
+            # if this node is an ancestor of any evidence
+            if node in ancestors_of_evidence:
+                for p in dag.parents[node]:
+                    queue.append((p, "up")) 
+    
+    return reachable
+
+
+def d_separation(dag: DAG, X: set, Y: set, Z: set):
+    """
+    Return True if d-sep(X;Y|Z), and False otherwise.
+    """
+    R = compute_reachable_nodes(dag, X, Y, Z)
+    return len(R) == 0  # Y is separated from X given Z if no node in Y is reachable
