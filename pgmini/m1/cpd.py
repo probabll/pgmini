@@ -57,6 +57,17 @@ class OutcomeSpace:
             yield joint_outcome
 
 
+def enumerate_joint_assignments(rvs: list, outcome_spaces: dict):
+    """
+    A helper generator of joint assignments (dict).
+    rvs: list of rv names, in order of enumeration
+    outcome_spaces: a dict mapping rv_name to an OutcomeSpace object
+        irrelevant rvs are ignored
+    """
+    for outcomes in OutcomeSpace.enumerate_joint_outcomes(*(outcome_spaces[rv] for rv in rvs)):
+        yield dict(zip(rvs, outcomes))
+
+
 class TabularCPD:
     """
     A container to hold a conditional probability distribution (CPD) 

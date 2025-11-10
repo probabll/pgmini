@@ -92,6 +92,9 @@ class DAG:
         self.ancestors = compute_ancestors(self.nodes, self.parents, self.topo)
         self.descendants = compute_descendants(self.nodes, self.children, self.topo)
 
+    def __hash__(self):
+        return hash((self.nodes, self.edges))
+
     def enumerate_trails(self, start, end, visited=None):
         """
         Return a generator for all trails between start and end.
@@ -214,5 +217,9 @@ def d_separation(dag: DAG, X: set, Y: set, Z: set):
     """
     Return True if d-sep(X;Y|Z), and False otherwise.
     """
+    X, Y, Z = set(X), set(Y), set(Z)
+    # Early termination: if any X or Y are in Z, they’re trivially d-separated
+    if X & Z or Y & Z:
+        return True
     R = compute_reachable_nodes(dag, X, Y, Z)
     return len(R) == 0  # Y is separated from X given Z if no node in Y is reachable
