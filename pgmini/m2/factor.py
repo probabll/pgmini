@@ -95,7 +95,9 @@ class TabularFactor(Factor):
     def reduce(self, assignment: dict) -> Factor:
         """
         Fix variables according to assignment, returning a new TabularFactor with reduced scope.
-        """        
+        """       
+        if len(self.outcome_spaces.keys() & assignment.keys()) == 0:
+            return self
         slicer = self.make_slicer(assignment)
         reduced_values = self.values[slicer]
         return TabularFactor([v for v in self.scope if v not in assignment], self.outcome_spaces, reduced_values)
