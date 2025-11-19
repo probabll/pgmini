@@ -1,4 +1,4 @@
-from pgmini.m1 import OutcomeSpace, DAG
+from pgmini.m1 import OutcomeSpace, DAG, enumerate_joint_assignments
 from pgmini.m2 import TabularFactor, UGraph
 from pgmini.m3 import TabularCPDFactor
 import functools
