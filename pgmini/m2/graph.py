@@ -16,7 +16,7 @@ class UGraph:
     def __init__(self, nodes: list, edges: list):
         """
         nodes: a list of string objects (or objects supporting str(obj))
-        edges: a list of edges, each represented as a (parent, child) pair
+        edges: a list of edges, each represented as a node pair
         """
         self.nodes = frozenset(str(node) for node in nodes)
         self.edges = frozenset((str(a), str(b)) if str(a) < str(b) else (str(b), str(a)) for a, b in edges)        
