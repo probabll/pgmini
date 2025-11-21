@@ -1,5 +1,6 @@
-from pgmini.m1 import OutcomeSpace, DAG, enumerate_joint_assignments
-from pgmini.m2 import TabularFactor, UGraph
+from pgmini.m1 import OutcomeSpace, DAG, enumerate_joint_assignments, d_separation
+from pgmini.m2 import TabularFactor, UGraph 
+from pgmini.m2 import separation as u_separation
 from pgmini.m3 import TabularCPDFactor
 import functools
 import itertools
@@ -37,6 +38,10 @@ class PGM:
         reduced_factors = [factor.reduce(assignment) for factor in self.iterfactors()]
         prod = functools.reduce(lambda a, b: a.product(b), reduced_factors)
         return prod.evaluate(dict())     
+
+    def separate(self, X: set, Y: set, Z: set):
+        """Test if X and Y are separate given Z"""
+        raise NotImplementedError("To be implemented by specific type of model")
 
 
 class BayesianNetwork(PGM):
@@ -88,6 +93,11 @@ class BayesianNetwork(PGM):
 
     def enumerate_joint_assignments(self, rvs):
         return enumerate_joint_assignments(rvs, self.outcome_spaces)
+
+    def separate(self, X: set, Y: set, Z: set):
+        """Test if X and Y are separate given Z"""
+        return d_separation(self.dag, X, Y, Z)
+        
 
 class MarkovNetwork(PGM):
     """
@@ -143,3 +153,7 @@ class MarkovNetwork(PGM):
     def enumerate_joint_assignments(self, rvs):
         """Enumerate joint assignments for the rvs given (in the order given)"""
         return enumerate_joint_assignments(rvs, self.outcome_spaces)
+
+    def separate(self, X: set, Y: set, Z: set):
+        """Test if X and Y are separate given Z"""
+        return u_separation(self.graph, X, Y, Z)
