@@ -50,16 +50,17 @@ class BayesianNetwork(PGM):
      and a collection of CPDs (we use TabularCPD from pgmini.m1)
     """
 
-    def __init__(self, cpd_factors):
+    def __init__(self, cpd_factors: 'iterable'):
         """
         cpd_factors: a collection of TabularCPDFactor objects
             the class builds the BN structure by analysing the factors        
         """
         super().__init__()
-        nodes = []
-        edges = []
+        
         self.cpds = dict()
         self.outcome_spaces = dict()
+        nodes = []
+        edges = []
         for cpd in cpd_factors:
             if not isinstance(cpd, TabularCPDFactor):
                 raise ValueError("BNs are parameterised by CPD factors, in this course they must be tabular.")
@@ -67,8 +68,7 @@ class BayesianNetwork(PGM):
             self.outcome_spaces[cpd.child] = cpd.outcome_spaces[cpd.child]
             nodes.append(cpd.child)
             for parent in cpd.parents:
-                edges.append((parent, cpd.child))
-        
+                edges.append((parent, cpd.child))        
         self.dag = DAG(nodes, edges)        
 
     def iterrvs(self):
@@ -105,7 +105,7 @@ class MarkovNetwork(PGM):
      and a collection of Factors (we use TabularCPD from pgmini.m2)
     """
 
-    def __init__(self, factors: list):
+    def __init__(self, factors: 'iterable'):
         """
         factors: a list of Factor objects
 
@@ -114,21 +114,21 @@ class MarkovNetwork(PGM):
         Building it is part of an exercise, read on and you will find out more.
         """
         super().__init__()
+        
+        self.outcome_spaces = dict()  
+        self.factors = tuple(factors)
         nodes = []
-        self.outcome_spaces = dict()
-        for factor in factors:
+        edges = []
+        for factor in self.factors:
             if not isinstance(factor, TabularFactor):
                 raise ValueError("MNs are parameterised by non-negative factors, in this course they must be tabular.")
             for rv, outcome_space in factor.outcome_spaces.items():
                 nodes.append(rv)                
-                self.outcome_spaces[rv] = outcome_space
-        edges = []
-        for factor in factors:
+                self.outcome_spaces[rv] = outcome_space                
             for rv1, rv2 in itertools.combinations(factor, 2):
-                edges.append((rv1, rv2))
-        
+                edges.append((rv1, rv2))        
         self.graph = UGraph(nodes, edges)
-        self.factors = list(factors)
+        
 
     def iterrvs(self):
         """Iterate over (rv, outcome_space) pairs for the rvs in this model (in arbitrary order)"""

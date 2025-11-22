@@ -36,6 +36,12 @@ class Factor:
         """
         raise NotImplementedError
 
+    def maximize(self, rvs: set) -> 'Factor':
+        """
+        Return a new factor with rvs maxed out.
+        """
+        raise NotImplementedError
+
     def product(self, other: 'Factor') -> 'Factor':
         """
         Return the product of this factor with another factor.
@@ -155,6 +161,21 @@ class TabularFactor(Factor):
         new_values = np.einsum(expr, self.values)
             
         return TabularFactor(remaining_vars, {rv: self.outcome_spaces[rv] for rv in remaining_vars}, new_values)
+
+    def maximize(self, rvs: set) -> Factor:
+        """
+        
+        """        
+        selected = sorted([self.rv2axis[rv] for rv in rvs])
+        new_values = np.max(self.values, axis=tuple(selected))
+        remaining_vars = [v for v in self.scope if v not in rvs]
+        return TabularFactor(remaining_vars, {v: self.outcome_spaces[v] for v in remaining_vars}, new_values) 
+        # for rv in rvs:
+        #     axis = f.rv2axis[rv]
+        #     new_values = np.max(f.values, axes=axis)
+        #     remaining_vars = [v for v in f.scope if v != rv]
+        #     f = TabularFactor(remaining_vars, {v: f.outcome_spaces[v] for v in remaining_vars}, new_values) 
+        return f
 
 
     def didactic_product(self, other) -> Factor:
