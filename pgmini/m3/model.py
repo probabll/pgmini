@@ -2,8 +2,10 @@ from pgmini.m1 import OutcomeSpace, DAG, enumerate_joint_assignments, d_separati
 from pgmini.m2 import TabularFactor, UGraph 
 from pgmini.m2 import separation as u_separation
 from pgmini.m3 import TabularCPDFactor
+from tabulate import tabulate
 import functools
 import itertools
+import pandas as pd
 
 
 class PGM:
@@ -91,7 +93,7 @@ class BayesianNetwork(PGM):
         """Iterate over the factors in this model (in arbitrary order)"""
         return iter(self.cpds.values())
 
-    def enumerate_joint_assignments(self, rvs):
+    def enumerate_joint_assignments(self, rvs: list):
         return enumerate_joint_assignments(rvs, self.outcome_spaces)
 
     def separate(self, X: set, Y: set, Z: set):
@@ -150,10 +152,64 @@ class MarkovNetwork(PGM):
         """Iterate over the factors in this model (in arbitrary order)"""
         return iter(self.factors)
 
-    def enumerate_joint_assignments(self, rvs):
+    def enumerate_joint_assignments(self, rvs: list):
         """Enumerate joint assignments for the rvs given (in the order given)"""
         return enumerate_joint_assignments(rvs, self.outcome_spaces)
 
     def separate(self, X: set, Y: set, Z: set):
         """Test if X and Y are separate given Z"""
         return u_separation(self.graph, X, Y, Z)
+
+
+def display_full_table(pgm: PGM, rvs=None, normalize=False, tablefmt='simple'):
+    """
+    Return a tabulate-formatted string that can be printed to display the whole (unnormalised) joint table.
+    
+    pgm: an instance of PGM
+    rvs: optionally specify the order in which to list rvs in the table
+    normalize: whether or not the output is to be normalized
+    """
+    table = []
+    if rvs is None:
+        rvs = list(pgm.iternodes())
+    total = 0.0
+    for assignment in pgm.enumerate_joint_assignments(rvs):
+        value = pgm.evaluate(assignment)
+        total += value
+        table.append([assignment[rv] for rv in rvs] + [value])
+    if normalize and total > 0.:
+        for row in table:
+            row[-1] /= total
+        return tabulate(table, headers=rvs + ['P'], tablefmt=tablefmt)
+    else:
+        return tabulate(table, headers=rvs + ['~P'], tablefmt=tablefmt)
+
+def pgm_to_tabular_factor(pgm: PGM):
+    return functools.reduce(lambda a, b: a.product(b), pgm.iterfactors())
+    
+def pgm_to_df(pgm: PGM, rvs=None, normalize=False, Z=None):
+    """
+    Return a pandas DataFrame containing a complete table-view of the joint unnormalised distribution represented by a PGM.
+    
+    pgm: an instance of PGM
+    rvs: optionally specify the order in which to list rvs in the table
+    normalize: whether or not the output is to be normalized
+    Z: the normalizer of the pgm
+        (either use normalize or give the normalizer Z, not both)
+    """
+    assert not (normalize and Z is not None), "Provide a normalization constant Z or request normalization, not both"
+        
+    table = []
+    if rvs is None:
+        rvs = list(pgm.iternodes())
+    total = 0.0
+    if Z is None:
+        Z = 1.0    
+    for assignment in pgm.enumerate_joint_assignments(rvs):
+        value = pgm.evaluate(assignment)
+        total += value
+        table.append([assignment[rv] for rv in rvs] + [value / Z])
+    if normalize and total > 0.:
+        for row in table:
+            row[-1] /= total
+    return pd.DataFrame(table, columns=rvs + ['Value'])

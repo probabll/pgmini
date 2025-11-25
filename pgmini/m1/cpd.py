@@ -63,7 +63,7 @@ def enumerate_joint_assignments(rvs: list, outcome_spaces: dict):
     rvs: list of rv names, in order of enumeration
     outcome_spaces: a dict mapping rv_name to an OutcomeSpace object
         irrelevant rvs are ignored
-    """
+    """    
     for outcomes in OutcomeSpace.enumerate_joint_outcomes(*(outcome_spaces[rv] for rv in rvs)):
         yield dict(zip(rvs, outcomes))
 

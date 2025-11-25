@@ -63,9 +63,11 @@ class UGraph:
     def __str__(self):
         """Generate a view of the graph using tabulate"""
         rows = []
+        for u in sorted(self.nodes):
+            rows.append([f"{u}"])
         for u, v in sorted(self.edges):
             rows.append([f"{u} -- {v}"])
-        return tabulate(rows, headers=['edges'], tablefmt='grid')
+        return tabulate(rows, headers=['nodes and edges'], tablefmt='grid')
 
     def __repr__(self):
         return str(self)
