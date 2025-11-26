@@ -180,7 +180,7 @@ class TabularFactor(Factor):
         return TabularFactor(remaining_vars, {v: self.outcome_spaces[v] for v in remaining_vars}, new_values)
 
 
-    def _argmax(self, rv):
+    def _argmax_rv(self, rv):
         """
         Return the argmax of the value tensor along the axis corresponding to the input rv.
         (This method provides auxiliary functionality to other methods in this class, 
@@ -189,8 +189,25 @@ class TabularFactor(Factor):
         axis = self.rv2axis[rv]
         argmax = np.argmax(self.values, axis=axis)        
         return argmax
+
+    def argmax_rv(self, query_rv: str, evidence: dict) -> str:
+        """
+        For a factor phi with scope (Q, E), where Q is a query rv and E is a set of evidence rvs,             
+            return the outcome of Q that maximizes phi[E=e](Q).         
+        That is:
+            argmax_{q in Val(Q)} phi[E=e](Q).
+
+        Withou Q and E, we return the argmax across the entire table.
         
-    def argmax(self, query_rv=None, evidence=None) -> str:
+        query_rv: the rv (in scope) for which we want the argmax.
+        evidence: an assignment of the remaining rvs in the factor's scope
+            this function requires assigning all rvs except Q.
+        """          
+        f = self.reduce(evidence)
+        argmax = f._argmax_rv(query_rv)
+        return self.outcome_spaces[query_rv].outcomes[argmax] 
+    
+    def argmax(self):
         """
         For a factor phi with scope (Q, E), where Q is a query rv and E is a set of evidence rvs,             
             return the outcome of Q that maximizes phi[E=e](Q).         
@@ -203,18 +220,11 @@ class TabularFactor(Factor):
         evidence: an assignment of the remaining rvs in the factor's scope
             this function requires assigning all rvs except Q.
         """        
-        if query_rv is None and evidence is None:
-            flat_argmax = self.values.flatten().argmax()
-            struct_argmax = np.unravel_index(flat_argmax, self.values.shape)
-            return {rv: self.outcome_spaces[rv].outcomes[argmax] for rv, argmax in zip(self.scope, struct_argmax)}
-        elif query_rv is not None and evidence is not None:            
-            f = self.reduce(evidence)
-            argmax = f._argmax(query_rv)
-            return self.outcome_spaces[query_rv].outcomes[argmax] 
-        else:
-            raise NotImplementedError("Either Q and E are None or neither are.")
-
-    def _sample(self, rv, rng):
+        flat_argmax = self.values.flatten().argmax()
+        struct_argmax = np.unravel_index(flat_argmax, self.values.shape)
+        return {rv: self.outcome_spaces[rv].outcomes[argmax] for rv, argmax in zip(self.scope, struct_argmax)}
+        
+    def _sample_rv(self, rv, rng) -> int:
         """
         Return an sample of the value tensor along the axis corresponding to the input rv.
         (This method provides auxiliary functionality to other methods in this class, 
@@ -224,11 +234,16 @@ class TabularFactor(Factor):
         x = rng.choice(len(self.outcome_spaces[rv]), p=self.values)
         return x
 
-    def sample(self, query_rv: str, evidence: dict, rng) -> str:
+    def sample_rv(self, query_rv: str, evidence: dict, rng=np.random.default_rng()) -> str:
         f = self.reduce(evidence)
-        x = f._sample(query_rv, rng)
+        x = f._sample_rv(query_rv, rng)
         return self.outcome_spaces[query_rv].outcomes[x]
-        
+    
+    def sample(self, rng=np.random.default_rng()) -> dict:
+        p = self.values.flatten() / np.sum(self.values)
+        flat_sample = rng.choice(len(p), p=p)
+        struct_sample = np.unravel_index(flat_sample, self.values.shape)
+        return {rv: self.outcome_spaces[rv].outcomes[idx] for rv, idx in zip(self.scope, struct_sample)}
 
     def didactic_product(self, other) -> Factor:
         """

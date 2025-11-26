@@ -173,7 +173,7 @@ def max_product_variable_elimination(pgm: PGM, evidence=dict(), key=None, trace=
     # solved the argmax assignment of any variable that might be needed at any one point
     for rv, f in reversed(max_trace):  
         # we assign all rvs we can, and then get the argmax for the rv that remains in the factor's scope
-        outcome = f.argmax(query_rv=rv, evidence=argmax_assignment)
+        outcome = f.argmax_rv(query_rv=rv, evidence=argmax_assignment)
         argmax_assignment[rv] = outcome        
 
     return argmax_assignment, MarkovNetwork(factors)
