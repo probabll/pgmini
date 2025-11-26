@@ -180,15 +180,18 @@ class TabularFactor(Factor):
         return TabularFactor(remaining_vars, {v: self.outcome_spaces[v] for v in remaining_vars}, new_values)
 
 
-    def _argmax_rv(self, rv):
+    def _argmax_rv(self) -> str:
         """
-        Return the argmax of the value tensor along the axis corresponding to the input rv.
+        Return the argmax of the value tensor.
+        This method only works when the factor has a single rv in its scope.
         (This method provides auxiliary functionality to other methods in this class, 
          user code wil seldom need to call this)
-        """
+        """        
+        assert len(self.scope) == 1, "This primitive only works for factors over a single rv"                
+        rv = self.scope[0]
         axis = self.rv2axis[rv]
-        argmax = np.argmax(self.values, axis=axis)        
-        return argmax
+        argmax = np.argmax(self.values, axis=axis)
+        return self.outcome_spaces[rv].outcomes[argmax] 
 
     def argmax_rv(self, query_rv: str, evidence: dict) -> str:
         """
@@ -204,8 +207,7 @@ class TabularFactor(Factor):
             this function requires assigning all rvs except Q.
         """          
         f = self.reduce(evidence)
-        argmax = f._argmax_rv(query_rv)
-        return self.outcome_spaces[query_rv].outcomes[argmax] 
+        return f._argmax_rv()        
     
     def argmax(self):
         """
@@ -224,26 +226,56 @@ class TabularFactor(Factor):
         struct_argmax = np.unravel_index(flat_argmax, self.values.shape)
         return {rv: self.outcome_spaces[rv].outcomes[argmax] for rv, argmax in zip(self.scope, struct_argmax)}
         
-    def _sample_rv(self, rv, rng) -> int:
+    def _sample_rv(self, rng) -> str:
         """
-        Return an sample of the value tensor along the axis corresponding to the input rv.
+        Return an sampled outcome. 
+        This method only works when the factor has a single rv in its scope.
         (This method provides auxiliary functionality to other methods in this class, 
          user code wil seldom need to call this)
         """
-        axis = self.rv2axis[rv]
-        x = rng.choice(len(self.outcome_spaces[rv]), p=self.values)
-        return x
+        assert len(self.scope) == 1, "This primitive only works for factors over a single rv"                
+        rv = self.scope[0]
+        idx = rng.choice(len(self.outcome_spaces[rv]), p=self.values / np.sum(self.values))
+        return self.outcome_spaces[rv].outcomes[idx]
 
     def sample_rv(self, query_rv: str, evidence: dict, rng=np.random.default_rng()) -> str:
+        """
+        Sample the outcome of one RV given all other RVs. 
+        query_rv: the rv (in scope) to be sampled
+        evidence: an assignment of all other rvs (irrelevant rvs are ignored)
+        rng: an np random number generator
+        """
         f = self.reduce(evidence)
-        x = f._sample_rv(query_rv, rng)
-        return self.outcome_spaces[query_rv].outcomes[x]
+        return f._sample_rv(rng)
     
-    def sample(self, rng=np.random.default_rng()) -> dict:
+    def sample(self, size=None, rng=np.random.default_rng()):
+        """
+        Sample one or more assignments of all rvs from the normalized version of the factor.
+        size: as in numpy
+            - if size is None, one sampled assignment (a dict) will be returned;
+            - otherwise, a list containining `size` sampled assignments (each a dict) will be returned
+            (note that this means that if size is 1, then a list with 1 assignment will be returned)
+        """
+        # flatten and normalise the table 
         p = self.values.flatten() / np.sum(self.values)
-        flat_sample = rng.choice(len(p), p=p)
-        struct_sample = np.unravel_index(flat_sample, self.values.shape)
-        return {rv: self.outcome_spaces[rv].outcomes[idx] for rv, idx in zip(self.scope, struct_sample)}
+        if size is None:
+            # draw a sample
+            flat_sample = rng.choice(len(p), p=p)
+            # find the structured ids of the outcomes in the original tensor
+            struct_sample = np.unravel_index(flat_sample, self.values.shape)
+            # make a dict assignment
+            return {rv: self.outcome_spaces[rv].outcomes[idx] for rv, idx in zip(self.scope, struct_sample)}
+        else:
+            # draw as many samples as requested
+            flat_samples = rng.choice(len(p), size=size, p=p)
+            samples = []
+            for flat_sample in flat_samples:  # for each flat sample
+                # find the structured ids of the outcomes in the original tensor
+                struct_sample = np.unravel_index(flat_sample, self.values.shape)
+                # make a dict assignment
+                sample = {rv: self.outcome_spaces[rv].outcomes[idx] for rv, idx in zip(self.scope, struct_sample)}    
+                samples.append(sample)
+            return samples
 
     def didactic_product(self, other) -> Factor:
         """
