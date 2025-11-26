@@ -79,7 +79,7 @@ def make_samples_df(samples: list, count_col="Count", prob_col="Value"):
     return counts
 
 
-def df_to_factor(pgm: PGM, df, prob_col="Value") -> TabularFactor:
+def df_to_factor(df, rvs: list, outcome_spaces: dict, value_col="Value", miss_value=0) -> TabularFactor:
     """
     Convert a DataFrame of TabularFactor.
     Note that this makes the representation dense (missing assignments in the DataFrame will have 0 score in the TabularFactor)
@@ -89,21 +89,21 @@ def df_to_factor(pgm: PGM, df, prob_col="Value") -> TabularFactor:
         containing sampled outcomes, their counts and frequency    
     prob_col : str
       Name of the column containing estimated probabilities    
-    """
-    rv_order = list(rv for rv in pgm.iternodes() if rv in df)
+    """    
+    rvs = list(rvs)
     # Determine number of states per RV
-    shape = [len(pgm.outcome_spaces[var]) for var in rv_order]
+    shape = [len(outcome_spaces[var]) for var in rvs]
 
     # Initialize tensor
-    tensor = np.zeros(shape, dtype=float)
+    tensor = np.zeros(shape, dtype=float) + miss_value
 
     # Fill tensor
     for _, row in df.iterrows():
         # Get indices in tensor according to rv_order
-        idx = tuple(pgm.outcome_spaces[var][row[var]] for var in rv_order)
-        tensor[idx] = row[prob_col]
+        idx = tuple(outcome_spaces[var][row[var]] for var in rvs)
+        tensor[idx] = row[value_col]
 
-    return TabularFactor(rv_order, {rv: pgm.outcome_spaces[rv] for rv in rv_order}, tensor)    
+    return TabularFactor(rvs, {rv: outcome_spaces[rv] for rv in rvs}, tensor)    
 
 
 def tvd(p, q, prob_col="Value"):
