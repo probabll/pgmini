@@ -93,11 +93,12 @@ def sum_product_variable_elimination(pgm: PGM, query_rvs=set(), evidence=dict(),
                 trace.append((rv, tuple()))
             continue
 
-        # when rv is separate from Q given E, we have nothing to do
-        # by calling split_factors before this test
+        # If we have a non-empty query Q, the rv we are trying to eliminate 
+        # may be separate from Q given E, if so, then we can simply eliminate the rv directly
+        # By calling split_factors before this test
         # we are sure that the factors that concern this separate rv have been removed
         # from the collection    
-        if sep_opt and pgm.separate(X={rv}, Y=Q, Z=E):
+        if sep_opt and Q and pgm.separate(X={rv}, Y=Q, Z=E):
             if trace is not None:  # possibly log what we did
                 trace.append((rv, tuple()))
             continue
