@@ -59,7 +59,7 @@ class TabularFactor(Factor):
     each variable.
     """
 
-    def __init__(self, scope: list, outcome_spaces: dict, values):
+    def __init__(self, scope: list, outcome_spaces: dict, values, from_template=None):
         """
         scope: list of rv names 
             the axes of the values tensor are aligned with rvs in the same
@@ -75,7 +75,10 @@ class TabularFactor(Factor):
         self.scope = tuple(scope)
         self.rv2axis = OrderedDict([(rv, axis) for axis, rv in enumerate(scope)])
         # tensor used to evaluate assignments of the variables in the scope
-        self.values = np.array(values, dtype=float)
+        if from_template is None:
+            self.values = np.array(values, dtype=float)
+        else:
+            self.values = from_template
 
     def evaluate(self, assignment: dict):
         """Evaluate the factor given assignments to all rvs in its scope"""
@@ -373,3 +376,4 @@ class TabularFactor(Factor):
 
     def __repr__(self):
         return str(self)
+
