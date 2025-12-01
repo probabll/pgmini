@@ -94,7 +94,7 @@ class BayesianNetwork(PGM):
         return iter(self.cpds.values())
 
     def enumerate_joint_assignments(self, rvs: list):
-        return enumerate_joint_assignments(rvs, self.outcome_spaces)
+        return enumerate_joint_assignments(list(rvs), self.outcome_spaces)
 
     def separate(self, X: set, Y: set, Z: set):
         """Test if X and Y are separate given Z"""
@@ -154,7 +154,7 @@ class MarkovNetwork(PGM):
 
     def enumerate_joint_assignments(self, rvs: list):
         """Enumerate joint assignments for the rvs given (in the order given)"""
-        return enumerate_joint_assignments(rvs, self.outcome_spaces)
+        return enumerate_joint_assignments(list(rvs), self.outcome_spaces)
 
     def separate(self, X: set, Y: set, Z: set):
         """Test if X and Y are separate given Z"""
