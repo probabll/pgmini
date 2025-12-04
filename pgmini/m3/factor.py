@@ -7,7 +7,7 @@ class TabularCPDFactor(TabularFactor):
     This is just a TabularCPD but it is implemented via a TabularFactor
     """
 
-    def __init__(self, parents: tuple, child: str, outcome_spaces: dict, values, tol=1e-6):
+    def __init__(self, parents: tuple, child: str, outcome_spaces: dict, values, tol=1e-6, from_template=None):
         """
         parents: list of parent rvs
         child: child rv            
@@ -17,7 +17,7 @@ class TabularCPDFactor(TabularFactor):
             the axes of the values tensor are aligned with rvs in the 
             order: tuple(parents) + (child,)
         """
-        super().__init__(tuple(parents) + (child,), outcome_spaces, values)
+        super().__init__(tuple(parents) + (child,), outcome_spaces, values, from_template=from_template)
         self.child = child
         self.parents = tuple(parents)
         assert np.allclose(np.sum(self.values, -1), 1, tol), "Some CPDs are not summing to 1.0"
